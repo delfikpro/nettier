@@ -37,11 +37,14 @@ public abstract class NettierNodeImpl implements NettierNode {
 
     protected final List<PacketHandler> middleware = new ArrayList<>();
 
+    protected final Logger logger;
+
     @Getter
     protected final Cache<Long, CompletableFuture> responseCache = CacheBuilder.newBuilder()
             .concurrencyLevel(3)
-            .expireAfterWrite(5L, TimeUnit.SECONDS)
+            .expireAfterWrite(50L, TimeUnit.SECONDS)
             .<Long, CompletableFuture>removalListener(notification -> {
+                logger.warning("Removed " + notification.getKey() + " talk from responseCache");
                 if (notification.getCause() == RemovalCause.EXPIRED) {
                     val callback = notification.getValue();
                     if (!callback.isDone()) {
@@ -53,7 +56,6 @@ public abstract class NettierNodeImpl implements NettierNode {
 
     private final Multimap<Class<?>, PacketHandler<?>> listenerMap = HashMultimap.create();
 
-    protected final Logger logger;
 
     protected final AtomicLong packetCounter = new AtomicLong();
 
@@ -127,7 +129,7 @@ public abstract class NettierNodeImpl implements NettierNode {
 
         CompletableFuture callback = talkId == 0 ? null : responseCache.getIfPresent(talkId);
 
-        System.out.println("Callback for talk " + talkId + " is " + callback);
+        logger.warning("Callback for talk " + talkId + " is " + callback);
 
         val listeners = listenerMap.get(packet.getClass());
 
