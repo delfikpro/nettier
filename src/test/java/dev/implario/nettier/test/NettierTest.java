@@ -3,6 +3,8 @@ package dev.implario.nettier.test;
 import dev.implario.nettier.NettierClient;
 import dev.implario.nettier.NettierServer;
 import dev.implario.nettier.Nettier;
+import dev.implario.nettier.impl.client.NettierClientImpl;
+import dev.implario.nettier.impl.server.NettierServerImpl;
 import lombok.Data;
 import org.junit.jupiter.api.Test;
 
@@ -45,6 +47,9 @@ public class NettierTest {
 
         NettierServer server = Nettier.createServer();
 
+        ((NettierServerImpl) server).setDebugReads(true);
+        ((NettierServerImpl) server).setDebugWrites(true);
+
         server.addListener(InverseRequest.class, (talk, request) -> {
             if (request.getValue() == 0)
                 talk.send(new EvalError("Unable to inverse zero."));
@@ -56,6 +61,9 @@ public class NettierTest {
 
 
         NettierClient client = Nettier.createClient();
+
+        ((NettierClientImpl) client).setDebugReads(true);
+        ((NettierClientImpl) client).setDebugWrites(true);
 
         client.setForeignPacketHandler(packet -> {
             if (packet instanceof EvalError)
