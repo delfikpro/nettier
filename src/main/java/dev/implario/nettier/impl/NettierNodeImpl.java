@@ -3,6 +3,7 @@ package dev.implario.nettier.impl;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalCause;
+import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
@@ -43,15 +44,7 @@ public abstract class NettierNodeImpl implements NettierNode {
     protected final Cache<Long, CompletableFuture> responseCache = CacheBuilder.newBuilder()
             .concurrencyLevel(3)
             .expireAfterWrite(50L, TimeUnit.SECONDS)
-            .<Long, CompletableFuture>removalListener(notification -> {
-                logger.warning("Removed " + notification.getKey() + " talk from responseCache");
-                if (notification.getCause() == RemovalCause.EXPIRED) {
-                    val callback = notification.getValue();
-                    if (!callback.isDone()) {
-                        callback.completeExceptionally(new TimeoutException("Packet " + notification.getKey() + " timed out"));
-                    }
-                }
-            })
+            .<Long, CompletableFuture>removalListener(this::onCacheRemoval)
             .build();
 
     private final Multimap<Class<?>, PacketHandler<?>> listenerMap = HashMultimap.create();
@@ -177,4 +170,13 @@ public abstract class NettierNodeImpl implements NettierNode {
     }
 
 
+    private void onCacheRemoval(RemovalNotification<Long, CompletableFuture> notification) {
+        logger.warning("Removed " + notification.getKey() + " talk from responseCache");
+        if (notification.getCause() == RemovalCause.EXPIRED) {
+            val callback = notification.getValue();
+            if (!callback.isDone()) {
+                callback.completeExceptionally(new TimeoutException("Packet " + notification.getKey() + " timed out"));
+            }
+        }
+    }
 }
