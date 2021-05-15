@@ -37,7 +37,7 @@ public class Talk {
         CompletableFuture<T> future = awaitFuture(type);
 
         try {
-            Object response = future.get(5, TimeUnit.SECONDS);
+            Object response = future.get(10, TimeUnit.SECONDS);
 
             if (!type.isInstance(response)) {
                 node.getForeignPacketHandler().accept(response);

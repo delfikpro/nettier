@@ -40,7 +40,7 @@ public abstract class NettierNodeImpl implements NettierNode {
     @Getter
     protected final Cache<Long, CompletableFuture> responseCache = CacheBuilder.newBuilder()
             .concurrencyLevel(3)
-            .expireAfterWrite(10L, TimeUnit.SECONDS)
+            .expireAfterWrite(5L, TimeUnit.SECONDS)
             .<Long, CompletableFuture>removalListener(notification -> {
                 if (notification.getCause() == RemovalCause.EXPIRED) {
                     val callback = notification.getValue();
@@ -126,6 +126,8 @@ public abstract class NettierNodeImpl implements NettierNode {
     private void handlePacket(NettierRemote remote, long talkId, Object packet) {
 
         CompletableFuture callback = talkId == 0 ? null : responseCache.getIfPresent(talkId);
+
+        System.out.println("Callback for talk " + talkId + " is " + callback);
 
         val listeners = listenerMap.get(packet.getClass());
 
