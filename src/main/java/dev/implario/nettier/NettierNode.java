@@ -13,7 +13,7 @@ public interface NettierNode {
 
     void setExecutor(Consumer<Runnable> executor);
 
-    void setForeignPacketHandler(Consumer<Object> handler);
+    void setPacketTranslator(PacketTranslator translator);
 
     <T> void addListener(Class<T> clazz, PacketHandler<T> handler);
 

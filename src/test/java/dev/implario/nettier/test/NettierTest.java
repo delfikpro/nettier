@@ -6,6 +6,7 @@ import dev.implario.nettier.Nettier;
 import dev.implario.nettier.impl.client.NettierClientImpl;
 import dev.implario.nettier.impl.server.NettierServerImpl;
 import lombok.Data;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,8 +43,10 @@ public class NettierTest {
 
     }
 
-    @Test
-    public void testNettier() throws Exception {
+    private static final NettierClient client = Nettier.createClient();
+
+    @BeforeAll
+    public static void prepare() throws InterruptedException {
 
         NettierServer server = Nettier.createServer();
 
@@ -52,27 +55,24 @@ public class NettierTest {
 
         server.addListener(InverseRequest.class, (talk, request) -> {
             if (request.getValue() == 0)
-                talk.send(new EvalError("Unable to inverse zero."));
+                talk.respond(new EvalError("Unable to inverse zero."));
             else
-                talk.send(1.0 / request.getValue());
+                talk.respond(1.0 / request.getValue());
         });
 
         server.start(49146).await();
 
-
-        NettierClient client = Nettier.createClient();
+        client.connect("127.0.0.1", 49146);
 
         ((NettierClientImpl) client).setDebugReads(true);
         ((NettierClientImpl) client).setDebugWrites(true);
 
-        client.setForeignPacketHandler(packet -> {
-            if (packet instanceof EvalError)
-                throw new EvalException(((EvalError) packet).getMessage());
-        });
-
-        client.connect("127.0.0.1", 49146);
-
         client.waitUntilReady();
+
+    }
+
+    @Test
+    public void testSimpleCommunication() throws Exception {
 
         double testValue = Math.PI;
 
@@ -80,9 +80,25 @@ public class NettierTest {
 
         assertEquals(1.0 / testValue, result);
 
+    }
+
+    @Test
+    public void testTranslatorErrors() throws Exception {
+
+        client.setPacketTranslator((packet, type) -> {
+            System.out.println("Translating " + packet);
+            if (packet instanceof EvalError) {
+                System.out.println("throwing");
+                throw new EvalException(((EvalError) packet).getMessage());
+            }
+            return packet;
+        });
+
         assertThrows(EvalException.class, () ->
                 client.send(new InverseRequest(0)).await(InverseResponse.class)
         );
     }
+
+
 
 }

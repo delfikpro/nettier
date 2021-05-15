@@ -16,7 +16,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.SneakyThrows;
 import lombok.val;
 
 import java.net.URI;
@@ -125,8 +124,9 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
 
     @Override
     public Talk send(Object packet) {
+        System.out.println("Sending " + packet + ", counter is " + packetCounter.get());
         return new Talk(packetCounter.incrementAndGet(), this, this)
-                .send(packet);
+                .respond(packet);
     }
 
     @Override
@@ -148,7 +148,7 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
         channel.close();
         channel = null;
         ready = false;
-        responseCache.invalidateAll();
+        talkCache.invalidateAll();
         processAutoReconnect();
     }
 

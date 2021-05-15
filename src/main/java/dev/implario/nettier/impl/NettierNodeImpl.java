@@ -29,7 +29,7 @@ import java.util.logging.Logger;
 @Getter
 @RequiredArgsConstructor
 @ChannelHandler.Sharable
-@SuppressWarnings ({"rawtypes", "unchecked"})
+@SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class NettierNodeImpl implements NettierNode {
 
     protected final Gson gson;
@@ -41,10 +41,11 @@ public abstract class NettierNodeImpl implements NettierNode {
     protected final Logger logger;
 
     @Getter
-    protected final Cache<Long, CompletableFuture> responseCache = CacheBuilder.newBuilder()
+    protected final Cache<Long, Talk> talkCache = CacheBuilder.newBuilder()
             .concurrencyLevel(3)
+            .weakValues()
             .expireAfterWrite(50L, TimeUnit.SECONDS)
-            .<Long, CompletableFuture>removalListener(this::onCacheRemoval)
+            .removalListener(this::onCacheRemoval)
             .build();
 
     private final Multimap<Class<?>, PacketHandler<?>> listenerMap = HashMultimap.create();
@@ -59,7 +60,7 @@ public abstract class NettierNodeImpl implements NettierNode {
     private Consumer<NettierRemote> handshakeHandler;
 
     @Setter
-    private Consumer<Object> foreignPacketHandler;
+    private PacketTranslator packetTranslator;
 
     @Setter
     private Consumer<Runnable> executor = Runnable::run;
@@ -118,18 +119,13 @@ public abstract class NettierNodeImpl implements NettierNode {
         handlePacket(remote, talkId, packet);
     }
 
+    @SneakyThrows
     private void handlePacket(NettierRemote remote, long talkId, Object packet) {
 
-        CompletableFuture callback = talkId == 0 ? null : responseCache.getIfPresent(talkId);
-
-        logger.warning("Callback for talk " + talkId + " is " + callback);
+        Talk talk = talkId == 0 ? new Talk(talkId, this, remote) :
+                talkCache.get(talkId, () -> new Talk(talkId, this, remote));
 
         val listeners = listenerMap.get(packet.getClass());
-
-        if (callback == null && listeners.isEmpty())
-            return;
-
-        Talk talk = new Talk(talkId, this, remote);
 
         executor.accept(() -> {
 
@@ -145,8 +141,8 @@ public abstract class NettierNodeImpl implements NettierNode {
                 }
             });
 
-            if (callback != null && !callback.isDone())
-                callback.complete(packet);
+            talk.receive(packet);
+
         });
 
     }
@@ -170,11 +166,14 @@ public abstract class NettierNodeImpl implements NettierNode {
     }
 
 
-    private void onCacheRemoval(RemovalNotification<Long, CompletableFuture> notification) {
+    private void onCacheRemoval(RemovalNotification<Long, Talk> notification) {
         logger.warning("Removed " + notification.getKey() + " talk from responseCache");
         if (notification.getCause() == RemovalCause.EXPIRED) {
-            val callback = notification.getValue();
-            if (!callback.isDone()) {
+            val talk = notification.getValue();
+            if (talk == null) return;
+
+            CompletableFuture<Object> callback = talk.getFuture();
+            if (callback != null && !callback.isDone()) {
                 callback.completeExceptionally(new TimeoutException("Packet " + notification.getKey() + " timed out"));
             }
         }

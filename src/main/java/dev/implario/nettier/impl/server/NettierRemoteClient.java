@@ -32,7 +32,7 @@ public class NettierRemoteClient implements NettierRemote {
     @Override
     public Talk send(Object packet) {
         return new Talk(node.getPacketCounter().decrementAndGet(), node, this)
-                .send(packet);
+                .respond(packet);
     }
 
     @Override
