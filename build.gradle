@@ -1,0 +1,61 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'jacoco'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    api 'io.netty:netty-all:4.1.63.Final'
+    api 'com.google.guava:guava:30.1.1-jre'
+    api 'com.google.code.gson:gson:2.8.6'
+
+    annotationProcessor 'org.projectlombok:lombok:1.18.12'
+    compileOnly 'org.projectlombok:lombok:1.18.12'
+
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.12'
+    testCompileOnly 'org.projectlombok:lombok:1.18.12'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+}
+
+tasks.jacocoTestReport {
+    reports {
+        csv.enabled true
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            url 'https://repo.implario.dev/public'
+            credentials {
+                username System.getenv('IMPLARIO_REPO_USER')
+                password System.getenv('IMPLARIO_REPO_PASSWORD')
+            }
+        }
+    }
+    def project = rootProject
+    publications {
+        create("nettier", MavenPublication) {
+            it.artifactId = "nettier"
+            it.groupId = "dev.implario"
+            it.version = "1.0.1"
+            it.from project.components['java']
+        }
+    }
+}
