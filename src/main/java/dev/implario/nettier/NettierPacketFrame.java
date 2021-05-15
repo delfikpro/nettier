@@ -5,8 +5,8 @@ import lombok.Data;
 @Data
 public class NettierPacketFrame {
 
+    private final long talk;
     private final String type;
     private final Object packet;
-    private final long talk;
 
 }

@@ -124,9 +124,7 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
 
     @Override
     public Talk send(Object packet) {
-        System.out.println("Sending " + packet + ", counter is " + packetCounter.get());
-        return new Talk(packetCounter.incrementAndGet(), this, this)
-                .respond(packet);
+        return provideTalk(packetCounter.incrementAndGet(), this).respond(packet);
     }
 
     @Override

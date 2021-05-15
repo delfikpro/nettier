@@ -5,8 +5,6 @@ import dev.implario.nettier.Talk;
 import dev.implario.nettier.impl.NettierNodeImpl;
 import dev.implario.nettier.impl.NettyAdapter;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.Getter;
 
 public class NettierRemoteClient implements NettierRemote {
@@ -31,7 +29,7 @@ public class NettierRemoteClient implements NettierRemote {
 
     @Override
     public Talk send(Object packet) {
-        return new Talk(node.getPacketCounter().decrementAndGet(), node, this)
+        return node.provideTalk(node.getPacketCounter().decrementAndGet(), this)
                 .respond(packet);
     }
 

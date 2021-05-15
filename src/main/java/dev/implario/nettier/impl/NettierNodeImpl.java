@@ -122,8 +122,7 @@ public abstract class NettierNodeImpl implements NettierNode {
     @SneakyThrows
     private void handlePacket(NettierRemote remote, long talkId, Object packet) {
 
-        Talk talk = talkId == 0 ? new Talk(talkId, this, remote) :
-                talkCache.get(talkId, () -> new Talk(talkId, this, remote));
+        Talk talk = provideTalk(talkId, remote);
 
         val listeners = listenerMap.get(packet.getClass());
 
@@ -154,7 +153,7 @@ public abstract class NettierNodeImpl implements NettierNode {
         if (type == null)
             throw new NettierException("Unable to qualify " + packet.getClass().getName());
 
-        return new NettierPacketFrame(type, packet, talkId);
+        return new NettierPacketFrame(talkId, type, packet);
     }
 
     public WebSocketFrame toWebSocketFrame(NettierPacketFrame nettierFrame) {
@@ -165,9 +164,15 @@ public abstract class NettierNodeImpl implements NettierNode {
         return new TextWebSocketFrame(json);
     }
 
+    @SneakyThrows
+    public Talk provideTalk(long talkId, NettierRemote remote) {
+        return talkId == 0 ? new Talk(talkId, this, remote) :
+                talkCache.get(talkId, () -> new Talk(talkId, this, remote));
+    }
+
 
     private void onCacheRemoval(RemovalNotification<Long, Talk> notification) {
-        logger.warning("Removed " + notification.getKey() + " talk from responseCache");
+//        logger.warning("Removed " + notification.getKey() + " talk from responseCache: " + notification.getCause());
         if (notification.getCause() == RemovalCause.EXPIRED) {
             val talk = notification.getValue();
             if (talk == null) return;

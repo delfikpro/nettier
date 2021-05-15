@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @Getter
-@RequiredArgsConstructor
+//@RequiredArgsConstructor
 public class Talk {
 
     private final long id;
@@ -20,6 +20,12 @@ public class Talk {
 
     private Object lastReceivedPacket;
     private CompletableFuture<Object> future;
+
+    public Talk(long id, NettierNodeImpl node, NettierRemote remote) {
+        this.id = id;
+        this.node = node;
+        this.remote = remote;
+    }
 
     public Talk respond(Object response) {
         remote.write(response, this.id);
@@ -34,12 +40,13 @@ public class Talk {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> CompletableFuture<T> awaitFuture(Class<T> type) {
         CompletableFuture future = new CompletableFuture<>();
-        this.future = future;
+        if (this.lastReceivedPacket != null) future.complete(lastReceivedPacket);
+        else this.future = future;
 
-        node.getTalkCache().put(this.id, this);
         return future.thenApply(response -> {
 
             this.lastReceivedPacket = null;
+            this.future = null;
 
             PacketTranslator translator = node.getPacketTranslator();
             if (translator != null) response = translator.translate(response, type);

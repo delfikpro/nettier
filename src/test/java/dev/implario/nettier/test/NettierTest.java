@@ -1,14 +1,20 @@
 package dev.implario.nettier.test;
 
+import com.google.gson.Gson;
 import dev.implario.nettier.NettierClient;
 import dev.implario.nettier.NettierServer;
 import dev.implario.nettier.Nettier;
+import dev.implario.nettier.Talk;
 import dev.implario.nettier.impl.client.NettierClientImpl;
 import dev.implario.nettier.impl.server.NettierServerImpl;
+import implario.LoggerUtils;
 import lombok.Data;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.logging.Logger;
+
+import static java.lang.Math.PI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -43,12 +49,15 @@ public class NettierTest {
 
     }
 
-    private static final NettierClient client = Nettier.createClient();
+    private static NettierClient client;
 
     @BeforeAll
     public static void prepare() throws InterruptedException {
 
-        NettierServer server = Nettier.createServer();
+        Gson gson = new Gson();
+
+        NettierServer server = Nettier.createServer(gson, LoggerUtils.simpleLogger("Server"));
+        client = Nettier.createClient(gson, LoggerUtils.simpleLogger("Client"));
 
         ((NettierServerImpl) server).setDebugReads(true);
         ((NettierServerImpl) server).setDebugWrites(true);
@@ -74,11 +83,9 @@ public class NettierTest {
     @Test
     public void testSimpleCommunication() throws Exception {
 
-        double testValue = Math.PI;
+        Double result = client.send(new InverseRequest(PI)).await(Double.class);
 
-        Double result = client.send(new InverseRequest(testValue)).await(Double.class);
-
-        assertEquals(1.0 / testValue, result);
+        assertEquals(1.0 / PI, result);
 
     }
 
@@ -86,9 +93,7 @@ public class NettierTest {
     public void testTranslatorErrors() throws Exception {
 
         client.setPacketTranslator((packet, type) -> {
-            System.out.println("Translating " + packet);
             if (packet instanceof EvalError) {
-                System.out.println("throwing");
                 throw new EvalException(((EvalError) packet).getMessage());
             }
             return packet;
@@ -97,6 +102,19 @@ public class NettierTest {
         assertThrows(EvalException.class, () ->
                 client.send(new InverseRequest(0)).await(InverseResponse.class)
         );
+    }
+
+    @Test
+    public void testDelayedAwait() throws Exception {
+
+        Talk talk = client.send(new InverseRequest(PI));
+
+        Thread.sleep(100);
+
+        Double result = talk.await(Double.class);
+
+        assertEquals(1.0 / PI, result);
+
     }
 
 
