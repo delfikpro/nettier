@@ -59,12 +59,16 @@ public class Talk {
         });
     }
 
-    @SneakyThrows
     public <T> T await(Class<T> type) throws NettierException {
+        return await(type, 3, TimeUnit.SECONDS);
+    }
+
+    @SneakyThrows
+    public <T> T await(Class<T> type, long timeout, TimeUnit timeUnit) throws NettierException {
 
         CompletableFuture<T> future = awaitFuture(type);
         try {
-            return future.get(3, TimeUnit.SECONDS);
+            return future.get(timeout, timeUnit);
         } catch (TimeoutException ex) {
             throw new NettierException("Talk " + id + " timed out while waiting for " + type.getSimpleName(), ex);
         } catch (InterruptedException ex) {

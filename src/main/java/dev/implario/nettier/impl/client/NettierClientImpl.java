@@ -18,6 +18,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.val;
 
+import java.net.InetAddress;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -49,6 +51,11 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
 
     public NettierClientImpl(Gson gson, Logger logger) {
         super(gson, logger);
+    }
+
+    @Override
+    public SocketAddress getAddress() {
+        return channel.remoteAddress();
     }
 
     public void waitUntilReady() {

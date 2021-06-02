@@ -2,8 +2,10 @@ package dev.implario.nettier;
 
 import lombok.Getter;
 
+import java.util.logging.Logger;
+
 @Getter
-public class RemoteException extends Exception {
+public class RemoteException extends RuntimeException {
 
     private final ErrorLevel errorLevel;
 

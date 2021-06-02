@@ -7,6 +7,8 @@ import dev.implario.nettier.impl.NettyAdapter;
 import io.netty.channel.Channel;
 import lombok.Getter;
 
+import java.net.SocketAddress;
+
 public class NettierRemoteClient implements NettierRemote {
 
     @Getter
@@ -25,6 +27,11 @@ public class NettierRemoteClient implements NettierRemote {
                 () -> node.getClients().add(this),
                 () -> node.getClients().remove(this)
         );
+    }
+
+    @Override
+    public SocketAddress getAddress() {
+        return channel.remoteAddress();
     }
 
     @Override
