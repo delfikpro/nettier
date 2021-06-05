@@ -1,18 +1,13 @@
 package dev.implario.nettier.test;
 
 import com.google.gson.Gson;
-import dev.implario.nettier.NettierClient;
-import dev.implario.nettier.NettierServer;
-import dev.implario.nettier.Nettier;
-import dev.implario.nettier.Talk;
+import dev.implario.nettier.*;
 import dev.implario.nettier.impl.client.NettierClientImpl;
 import dev.implario.nettier.impl.server.NettierServerImpl;
 import implario.LoggerUtils;
 import lombok.Data;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import java.util.logging.Logger;
 
 import static java.lang.Math.PI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,32 +18,34 @@ public class NettierTest {
     @Data
     public static class InverseRequest {
 
+
         private final double value;
 
     }
-
     @Data
     public static class InverseResponse {
+
 
         private final double inverse;
 
     }
-
     @Data
     public static class EvalError {
+
 
         private final String message;
 
     }
-
     public static class EvalException extends RuntimeException {
 
         public EvalException(String message) {
             super(message);
         }
 
+
     }
 
+    private static NettierServer server;
     private static NettierClient client;
 
     @BeforeAll
@@ -56,7 +53,7 @@ public class NettierTest {
 
         Gson gson = new Gson();
 
-        NettierServer server = Nettier.createServer(gson, LoggerUtils.simpleLogger("Server"));
+        server = Nettier.createServer(gson, LoggerUtils.simpleLogger("Server"));
         client = Nettier.createClient(gson, LoggerUtils.simpleLogger("Client"));
 
         ((NettierServerImpl) server).setDebugReads(true);
@@ -81,7 +78,7 @@ public class NettierTest {
     }
 
     @Test
-    public void testSimpleCommunication() throws Exception {
+    public void testSimpleCommunication() {
 
         Double result = client.send(new InverseRequest(PI)).await(Double.class);
 
@@ -90,7 +87,7 @@ public class NettierTest {
     }
 
     @Test
-    public void testTranslatorErrors() throws Exception {
+    public void testTranslatorErrors() {
 
         client.setPacketTranslator((packet, type) -> {
             if (packet instanceof EvalError) {
@@ -112,6 +109,30 @@ public class NettierTest {
         Thread.sleep(100);
 
         Double result = talk.await(Double.class);
+
+        assertEquals(1.0 / PI, result);
+
+    }
+
+    @Test
+    public void testPacketQualification() {
+
+        PacketQualifier qualifier = new PacketQualifier() {
+            @Override
+            public String getTypeForPacket(Object packet) {
+                return packet instanceof Double ? "double" : null;
+            }
+
+            @Override
+            public Class<?> getClassForType(String type) {
+                return type.equals("double") ? Double.class : null;
+            }
+        };
+
+        client.getQualifier().getQualifiers().add(0, qualifier);
+        server.getQualifier().getQualifiers().add(0, qualifier);
+
+        Double result = client.send(new InverseRequest(PI)).await(Double.class);
 
         assertEquals(1.0 / PI, result);
 
