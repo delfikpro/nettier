@@ -28,7 +28,9 @@ public class ComplexPacketQualifier implements PacketQualifier {
     public Class<?> getClassForType(String type) {
         for (PacketQualifier qualifier : qualifiers) {
             try {
-                return qualifier.getClassForType(type);
+                Class<?> classForType = qualifier.getClassForType(type);
+                if (classForType != null)
+                    return classForType;
             } catch (ClassNotFoundException ignored) { }
         }
         return null;
