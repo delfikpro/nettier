@@ -33,13 +33,13 @@ public class NettyUtil {
         if (epoll) {
             CLIENT_CHANNEL_CLASS = EpollSocketChannel.class;
             SERVER_CHANNEL_CLASS = EpollServerSocketChannel.class;
-            CLIENT_GROUP = new EpollEventLoopGroup(1);
-            SERVER_GROUP = new EpollEventLoopGroup(1);
+            CLIENT_GROUP = new EpollEventLoopGroup(4);
+            SERVER_GROUP = new EpollEventLoopGroup(4);
         } else {
             CLIENT_CHANNEL_CLASS = NioSocketChannel.class;
             SERVER_CHANNEL_CLASS = NioServerSocketChannel.class;
-            CLIENT_GROUP = new NioEventLoopGroup(1);
-            SERVER_GROUP = new NioEventLoopGroup(1);
+            CLIENT_GROUP = new NioEventLoopGroup(4);
+            SERVER_GROUP = new NioEventLoopGroup(4);
         }
     }
 

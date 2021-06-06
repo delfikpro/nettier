@@ -4,8 +4,10 @@ import dev.implario.nettier.NettierRemote;
 import dev.implario.nettier.Talk;
 import dev.implario.nettier.impl.NettierNodeImpl;
 import dev.implario.nettier.impl.NettyAdapter;
+import dev.implario.nettier.impl.TalkProvider;
 import io.netty.channel.Channel;
 import lombok.Getter;
+import lombok.experimental.Delegate;
 
 import java.net.SocketAddress;
 
@@ -19,6 +21,9 @@ public class NettierRemoteClient implements NettierRemote {
 
     @Getter
     private final NettyAdapter adapter;
+
+    @Delegate
+    private final TalkProvider talkProvider = new TalkProvider(this);
 
     public NettierRemoteClient(NettierServerImpl node, Channel channel) {
         this.node = node;
@@ -36,8 +41,7 @@ public class NettierRemoteClient implements NettierRemote {
 
     @Override
     public Talk send(Object packet) {
-        return node.provideTalk(node.getPacketCounter().decrementAndGet(), this)
-                .respond(packet);
+        return provideTalk(talkProvider.getPacketCounter().decrementAndGet()).respond(packet);
     }
 
     @Override

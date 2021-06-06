@@ -15,6 +15,8 @@ public interface NettierNode {
 
     void setPacketTranslator(PacketTranslator translator);
 
+    PacketTranslator getPacketTranslator();
+
     <T> void addListener(Class<T> clazz, PacketHandler<T> handler);
 
     <T> void removeListener(Class<T> clazz, PacketHandler<T> handler);

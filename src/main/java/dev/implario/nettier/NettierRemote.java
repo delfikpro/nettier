@@ -10,4 +10,8 @@ public interface NettierRemote {
 
     SocketAddress getAddress();
 
+    NettierNode getNode();
+
+    Talk provideTalk(long talkId);
+
 }

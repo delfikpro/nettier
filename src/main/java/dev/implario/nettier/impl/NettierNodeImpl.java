@@ -12,16 +12,13 @@ import com.google.gson.JsonObject;
 import dev.implario.nettier.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -40,18 +37,7 @@ public abstract class NettierNodeImpl implements NettierNode {
 
     protected final Logger logger;
 
-    @Getter
-    protected final Cache<Long, Talk> talkCache = CacheBuilder.newBuilder()
-            .concurrencyLevel(3)
-            .weakValues()
-            .expireAfterWrite(50L, TimeUnit.SECONDS)
-            .removalListener(this::onCacheRemoval)
-            .build();
-
     private final Multimap<Class<?>, PacketHandler<?>> listenerMap = HashMultimap.create();
-
-
-    protected final AtomicLong packetCounter = new AtomicLong();
 
     @Setter
     protected boolean autoReconnect = true;
@@ -63,7 +49,7 @@ public abstract class NettierNodeImpl implements NettierNode {
     private PacketTranslator packetTranslator;
 
     @Setter
-    private Consumer<Runnable> executor = Runnable::run;
+    private Consumer<Runnable> executor = r -> getEventLoopGroup().execute(r);
 
     @Setter
     private boolean debugReads, debugWrites;
@@ -88,6 +74,8 @@ public abstract class NettierNodeImpl implements NettierNode {
         else
             eventLoop.execute(command);
     }
+
+    public abstract EventLoopGroup getEventLoopGroup();
 
     public void processWebSocketFrame(NettierRemote remote, TextWebSocketFrame webSocketFrame) {
         val text = webSocketFrame.text();
@@ -122,7 +110,7 @@ public abstract class NettierNodeImpl implements NettierNode {
     @SneakyThrows
     private void handlePacket(NettierRemote remote, long talkId, Object packet) {
 
-        Talk talk = provideTalk(talkId, remote);
+        Talk talk = remote.provideTalk(talkId);
 
         val listeners = listenerMap.get(packet.getClass());
 
@@ -164,23 +152,6 @@ public abstract class NettierNodeImpl implements NettierNode {
         return new TextWebSocketFrame(json);
     }
 
-    @SneakyThrows
-    public Talk provideTalk(long talkId, NettierRemote remote) {
-        return talkId == 0 ? new Talk(talkId, this, remote) :
-                talkCache.get(talkId, () -> new Talk(talkId, this, remote));
-    }
 
 
-    private void onCacheRemoval(RemovalNotification<Long, Talk> notification) {
-//        logger.warning("Removed " + notification.getKey() + " talk from responseCache: " + notification.getCause());
-        if (notification.getCause() == RemovalCause.EXPIRED) {
-            val talk = notification.getValue();
-            if (talk == null) return;
-
-            CompletableFuture<Object> callback = talk.getFuture();
-            if (callback != null && !callback.isDone()) {
-                callback.completeExceptionally(new TimeoutException("Packet " + notification.getKey() + " timed out"));
-            }
-        }
-    }
 }

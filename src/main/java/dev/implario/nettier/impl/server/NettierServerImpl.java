@@ -8,6 +8,7 @@ import dev.implario.nettier.impl.NettyUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -15,14 +16,17 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public class NettierServerImpl extends NettierNodeImpl implements NettierServer {
 
     @Getter
-    private final List<NettierRemote> clients = new ArrayList<>();
+    private final Set<NettierRemote> clients = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private ChannelFuture context;
 
     public NettierServerImpl(Gson gson, Logger logger) {
@@ -39,10 +43,15 @@ public class NettierServerImpl extends NettierNodeImpl implements NettierServer 
     }
 
     @Override
+    public EventLoopGroup getEventLoopGroup() {
+        return NettyUtil.SERVER_GROUP;
+    }
+
+    @Override
     public ChannelFuture start(int port) {
 
         return context = new ServerBootstrap()
-                .group(NettyUtil.SERVER_GROUP)
+                .group(getEventLoopGroup())
                 .channel(NettyUtil.SERVER_CHANNEL_CLASS)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override

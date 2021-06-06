@@ -9,6 +9,13 @@ import lombok.Data;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import static java.lang.Math.PI;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -48,10 +55,11 @@ public class NettierTest {
     private static NettierServer server;
     private static NettierClient client;
 
+    private static final int TEST_PORT = 49146;
+    private static final Gson gson = new Gson();
+
     @BeforeAll
     public static void prepare() throws InterruptedException {
-
-        Gson gson = new Gson();
 
         server = Nettier.createServer(gson, LoggerUtils.simpleLogger("Server"));
         client = Nettier.createClient(gson, LoggerUtils.simpleLogger("Client"));
@@ -66,9 +74,11 @@ public class NettierTest {
                 talk.respond(1.0 / request.getValue());
         });
 
-        server.start(49146).await();
+        server.start(TEST_PORT).await();
 
-        client.connect("127.0.0.1", 49146);
+        client.setHandshakeHandler(r -> {});
+
+        client.connect("127.0.0.1", TEST_PORT);
 
         ((NettierClientImpl) client).setDebugReads(true);
         ((NettierClientImpl) client).setDebugWrites(true);
@@ -135,6 +145,77 @@ public class NettierTest {
         Double result = client.send(new InverseRequest(PI)).await(Double.class);
 
         assertEquals(1.0 / PI, result);
+
+        client.getQualifier().getQualifiers().remove(0);
+        server.getQualifier().getQualifiers().remove(0);
+
+    }
+
+    @Test
+    public void testBroadcast() throws InterruptedException, ExecutionException, TimeoutException {
+
+        CompletableFuture<String> future = new CompletableFuture<>();
+        client.addListener(String.class, (talk, s) -> future.complete(s));
+
+        server.broadcast("hello");
+
+        assertEquals("hello", future.get(1, TimeUnit.SECONDS));
+
+    }
+
+    @Test
+    public void testHandshake() throws Exception {
+
+        NettierClient client = Nettier.createClient(gson, LoggerUtils.simpleLogger("TestClient"));
+
+        CompletableFuture<Double> future = new CompletableFuture<>();
+
+        client.setHandshakeHandler(remote -> {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ignored) { }
+            System.out.println("hello");
+            client.send(new InverseRequest(PI)).awaitFuture(Double.class).thenAccept(future::complete);
+        });
+
+        client.connect("127.0.0.1", TEST_PORT);
+        client.waitUntilReady();
+
+        Thread.sleep(100);
+        System.out.println(((NettierServerImpl) server).getClients().size() + " clients connected");
+
+        assertEquals(1.0 / PI, future.get(10, TimeUnit.SECONDS));
+
+        client.close();
+
+    }
+
+    @Test
+    public void testMultipleClients() throws Exception {
+
+        List<NettierClient> clients = new ArrayList<>();
+
+        for (int i = 0; i < 3; i++) {
+            NettierClient client = Nettier.createClient(gson, LoggerUtils.simpleLogger("Client#" + (i + 1)));
+
+            client.connect("127.0.0.1", TEST_PORT);
+
+            clients.add(client);
+        }
+
+        for (NettierClient nettierClient : clients) {
+            nettierClient.waitUntilReady();
+        }
+
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+
+        for (NettierClient nettierClient : clients) {
+            futures.add(nettierClient.send(new InverseRequest(PI)).awaitFuture(Double.class)
+                    .thenAccept(d -> assertEquals(1.0 / PI, d)));
+        }
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(1, TimeUnit.SECONDS);
+
 
     }
 

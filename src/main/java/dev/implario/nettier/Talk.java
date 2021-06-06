@@ -11,21 +11,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @Getter
-//@RequiredArgsConstructor
+@RequiredArgsConstructor
 public class Talk {
 
     private final long id;
-    private final NettierNodeImpl node;
+    private final NettierNode node;
     private final NettierRemote remote;
 
     private Object lastReceivedPacket;
     private CompletableFuture<Object> future;
-
-    public Talk(long id, NettierNodeImpl node, NettierRemote remote) {
-        this.id = id;
-        this.node = node;
-        this.remote = remote;
-    }
 
     public Talk respond(Object response) {
         remote.write(response, this.id);

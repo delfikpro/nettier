@@ -2,9 +2,11 @@ package dev.implario.nettier.impl.client;
 
 import com.google.gson.Gson;
 import dev.implario.nettier.NettierClient;
+import dev.implario.nettier.NettierNode;
 import dev.implario.nettier.Talk;
 import dev.implario.nettier.impl.NettierNodeImpl;
 import dev.implario.nettier.impl.NettyAdapter;
+import dev.implario.nettier.impl.TalkProvider;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -16,9 +18,9 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Delegate;
 import lombok.val;
 
-import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +46,8 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
     private String hostname;
     private int port;
 
+    @Delegate
+    private final TalkProvider talkProvider = new TalkProvider(this);
 
     @Getter
     @Setter
@@ -56,6 +60,11 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
     @Override
     public SocketAddress getAddress() {
         return channel.remoteAddress();
+    }
+
+    @Override
+    public NettierNode getNode() {
+        return this;
     }
 
     public void waitUntilReady() {
@@ -81,11 +90,16 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
 
     }
 
+    @Override
+    public EventLoopGroup getEventLoopGroup() {
+        return CLIENT_GROUP;
+    }
+
     public ChannelFuture connect() {
 
         return new Bootstrap()
                 .channel(CLIENT_CHANNEL_CLASS)
-                .group(CLIENT_GROUP)
+                .group(getEventLoopGroup())
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
@@ -131,7 +145,7 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
 
     @Override
     public Talk send(Object packet) {
-        return provideTalk(packetCounter.incrementAndGet(), this).respond(packet);
+        return provideTalk(talkProvider.getPacketCounter().incrementAndGet()).respond(packet);
     }
 
     @Override
@@ -153,7 +167,7 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
         channel.close();
         channel = null;
         ready = false;
-        talkCache.invalidateAll();
+        talkProvider.getTalkCache().invalidateAll();
         processAutoReconnect();
     }
 

@@ -5,12 +5,12 @@ import dev.implario.nettier.NettierRemote;
 import dev.implario.nettier.impl.NettierNodeImpl;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.*;
+import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import lombok.RequiredArgsConstructor;
 
 import java.util.logging.Level;
 
-import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE;
-
+@ChannelHandler.Sharable
 @RequiredArgsConstructor
 public class NettyAdapter extends SimpleChannelInboundHandler<WebSocketFrame> {
 
@@ -22,10 +22,11 @@ public class NettyAdapter extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if (evt == HANDSHAKE_COMPLETE) {
+        if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE || evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
             onReady.run();
             if (node.getHandshakeHandler() != null) {
                 node.getExecutor().accept(() -> node.getHandshakeHandler().accept(remote));
+                System.out.println("Finished userEventTriggered()");
             }
         }
     }
