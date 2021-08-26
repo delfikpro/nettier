@@ -64,8 +64,8 @@ public class NettierTest {
         server = Nettier.createServer(gson, LoggerUtils.simpleLogger("Server"));
         client = Nettier.createClient(gson, LoggerUtils.simpleLogger("Client"));
 
-        ((NettierServerImpl) server).setDebugReads(true);
-        ((NettierServerImpl) server).setDebugWrites(true);
+//        ((NettierServerImpl) server).setDebugReads(true);
+//        ((NettierServerImpl) server).setDebugWrites(true);
 
         server.addListener(InverseRequest.class, (talk, request) -> {
             if (request.getValue() == 0)
@@ -80,8 +80,8 @@ public class NettierTest {
 
         client.connect("127.0.0.1", TEST_PORT);
 
-        ((NettierClientImpl) client).setDebugReads(true);
-        ((NettierClientImpl) client).setDebugWrites(true);
+//        ((NettierClientImpl) client).setDebugReads(true);
+//        ((NettierClientImpl) client).setDebugWrites(true);
 
         client.waitUntilReady();
 
@@ -142,9 +142,15 @@ public class NettierTest {
         client.getQualifier().getQualifiers().add(0, qualifier);
         server.getQualifier().getQualifiers().add(0, qualifier);
 
+        ((NettierServerImpl) server).setDebugWrites(true);
+        ((NettierClientImpl) client).setDebugReads(true);
+
         Double result = client.send(new InverseRequest(PI)).await(Double.class);
 
         assertEquals(1.0 / PI, result);
+
+        ((NettierServerImpl) server).setDebugWrites(false);
+        ((NettierClientImpl) client).setDebugReads(false);
 
         client.getQualifier().getQualifiers().remove(0);
         server.getQualifier().getQualifiers().remove(0);

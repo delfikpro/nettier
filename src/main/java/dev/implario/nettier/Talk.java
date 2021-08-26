@@ -1,6 +1,5 @@
 package dev.implario.nettier;
 
-import dev.implario.nettier.impl.NettierNodeImpl;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;

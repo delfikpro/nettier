@@ -24,7 +24,6 @@ public class TalkProvider {
 
     private final Cache<Long, Talk> talkCache = CacheBuilder.newBuilder()
             .concurrencyLevel(3)
-            .weakValues()
             .expireAfterWrite(50L, TimeUnit.SECONDS)
             .removalListener(this::onCacheRemoval)
             .build();
@@ -32,7 +31,6 @@ public class TalkProvider {
     private final AtomicLong packetCounter = new AtomicLong();
 
     private void onCacheRemoval(RemovalNotification<Long, Talk> notification) {
-//        logger.warning("Removed " + notification.getKey() + " talk from responseCache: " + notification.getCause());
         if (notification.getCause() == RemovalCause.EXPIRED) {
             val talk = notification.getValue();
             if (talk == null) return;

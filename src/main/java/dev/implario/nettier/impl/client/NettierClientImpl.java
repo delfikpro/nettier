@@ -53,6 +53,9 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
     @Setter
     private Channel channel;
 
+    @Setter
+    private Runnable disconnectHandler;
+
     public NettierClientImpl(Gson gson, Logger logger) {
         super(gson, logger);
     }
@@ -168,6 +171,7 @@ public class NettierClientImpl extends NettierNodeImpl implements NettierClient 
         channel = null;
         ready = false;
         talkProvider.getTalkCache().invalidateAll();
+        if (disconnectHandler != null) disconnectHandler.run();
         processAutoReconnect();
     }
 

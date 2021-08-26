@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 import dev.implario.nettier.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -19,6 +20,7 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,7 +51,7 @@ public abstract class NettierNodeImpl implements NettierNode {
     private PacketTranslator packetTranslator;
 
     @Setter
-    private Consumer<Runnable> executor = r -> getEventLoopGroup().execute(r);
+    private Executor executor = r -> getEventLoopGroup().execute(r);
 
     @Setter
     private boolean debugReads, debugWrites;
@@ -67,12 +69,7 @@ public abstract class NettierNodeImpl implements NettierNode {
     public void write(Channel channel, Object packet, long talkId) {
         if (channel == null)
             throw new NettierException("Channel is not initialized yet!");
-        Runnable command = () -> channel.writeAndFlush(toWebSocketFrame(toNettierFrame(packet, talkId)), channel.voidPromise());
-        val eventLoop = channel.eventLoop();
-        if (eventLoop.inEventLoop())
-            command.run();
-        else
-            eventLoop.execute(command);
+        channel.writeAndFlush(toWebSocketFrame(toNettierFrame(packet, talkId)));
     }
 
     public abstract EventLoopGroup getEventLoopGroup();
@@ -114,7 +111,7 @@ public abstract class NettierNodeImpl implements NettierNode {
 
         val listeners = listenerMap.get(packet.getClass());
 
-        executor.accept(() -> {
+        executor.execute(() -> {
 
             for (PacketHandler handler : middleware) {
                 handler.handle(talk, packet);

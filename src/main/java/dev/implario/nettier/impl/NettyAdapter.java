@@ -2,7 +2,6 @@ package dev.implario.nettier.impl;
 
 
 import dev.implario.nettier.NettierRemote;
-import dev.implario.nettier.impl.NettierNodeImpl;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
@@ -25,8 +24,7 @@ public class NettyAdapter extends SimpleChannelInboundHandler<WebSocketFrame> {
         if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE || evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
             onReady.run();
             if (node.getHandshakeHandler() != null) {
-                node.getExecutor().accept(() -> node.getHandshakeHandler().accept(remote));
-                System.out.println("Finished userEventTriggered()");
+                node.getExecutor().execute(() -> node.getHandshakeHandler().accept(remote));
             }
         }
     }

@@ -1,5 +1,6 @@
 package dev.implario.nettier;
 
+import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -11,7 +12,7 @@ public interface NettierNode {
 
     ComplexPacketQualifier getQualifier();
 
-    void setExecutor(Consumer<Runnable> executor);
+    void setExecutor(Executor executor);
 
     void setPacketTranslator(PacketTranslator translator);
 

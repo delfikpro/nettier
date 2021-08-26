@@ -14,4 +14,6 @@ public interface NettierRemote {
 
     Talk provideTalk(long talkId);
 
+    void setDisconnectHandler(Runnable runnable);
+
 }
