@@ -62,7 +62,7 @@ publishing {
         create("nettier", MavenPublication) {
             it.artifactId = "nettier"
             it.groupId = "dev.implario"
-            it.version = "1.2.0"
+            it.version = "1.2.1"
             it.from project.components['java']
         }
     }
